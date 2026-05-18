@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diffraction & interference (p5)</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        color: #111;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      #app-shell {
+        position: fixed;
+        inset: 0;
+      }
+      #p5-root {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background: #fff;
+      }
+      #p5-root canvas {
+        display: block;
+      }
+      #ui-root {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 10;
+        box-sizing: border-box;
+        width: min(420px, calc(100vw - 2rem));
+        max-height: calc(100vh - 2rem);
+        overflow: auto;
+        padding: 1rem 1.1rem;
+        background: rgba(255, 255, 255, 0.93);
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        backdrop-filter: blur(10px);
+      }
+      #ui-root h1 {
+        margin: 0 0 0.75rem;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      #ui-root .panel-drag-handle {
+        cursor: grab;
+        user-select: none;
+        touch-action: none;
+      }
+      #ui-root .panel-drag-handle.is-dragging {
+        cursor: grabbing;
+      }
+      #ui-root.ui-root--transparent {
+        opacity: 0.68;
+      }
+      #controls-mount .controls-grid {
+        display: grid;
+        gap: 0.55rem;
+      }
+      #controls-mount .control-row {
+        display: grid;
+        grid-template-columns: 10.5rem 1fr 2.75rem;
+        align-items: center;
+        column-gap: 0.5rem;
+        font-size: 0.9rem;
+        margin: 0;
+      }
+      #controls-mount .control-row--checkbox {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+      }
+      #controls-mount .control-label {
+        line-height: 1.25;
+      }
+      #controls-mount .control-slider {
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+      }
+      #controls-mount .control-value {
+        text-align: left;
+        font-variant-numeric: tabular-nums;
+        font-size: 0.85rem;
+        color: #333;
+      }
+      .serve-note {
+        margin: 0.75rem 0 0;
+        font-size: 0.75rem;
+        color: #555;
+        line-height: 1.35;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "p5": "https://esm.sh/p5@1.9.4"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app-shell">
+      <main id="p5-root"></main>
+      <aside id="ui-root">
+        <h1 class="panel-drag-handle">Parameters</h1>
+        <div id="controls-mount"></div>
+        <p class="serve-note">
+          Serve the repository root over HTTP so <code>/src/...</code> resolves.
+        </p>
+      </aside>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

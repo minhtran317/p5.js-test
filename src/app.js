@@ -6,7 +6,17 @@ import p5 from "p5";
 import { CANVAS, DEFAULT_SIM_PARAMS, PARAM_BOUNDS } from "./config/defaults.js";
 import { mountControls } from "./ui/controls.js";
 import { computeDiffractionSnapshot } from "./simulation/diffractionModel.js";
-import { drawDiffractionScene } from "./render/diffractionRenderer.js";
+import {
+  drawDiffractionScene,
+  handleDiagramPanDrag,
+  handleDiagramPanPress,
+  handleDiagramPanRelease,
+  handleDiagramTouchEnded,
+  handleDiagramTouchMoved,
+  handleDiagramTouchStarted,
+  handleDiagramWheel,
+  setDiagramPanSuppressed,
+} from "./render/diffractionRenderer.js";
 import { drawIntensityPanel } from "./render/intensityRenderer.js";
 import { drawWaveletOverlay } from "./render/waveletRenderer.js";
 
@@ -35,6 +45,13 @@ export function startApp({ uiHost, p5Host, panelRoot }) {
     },
   });
 
+  if (panelRoot) {
+    const endParamsPointer = () => setDiagramPanSuppressed(false);
+    panelRoot.addEventListener("pointerdown", () => setDiagramPanSuppressed(true));
+    window.addEventListener("pointerup", endParamsPointer);
+    window.addEventListener("pointercancel", endParamsPointer);
+  }
+
   const sketch = (p) => {
     /** @type {import('./simulation/diffractionModel.js').DiffractionSnapshot | null} */
     let snapshot = null;
@@ -49,6 +66,36 @@ export function startApp({ uiHost, p5Host, panelRoot }) {
     p.windowResized = () => {
       const { width, height } = viewportCanvasSize();
       p.resizeCanvas(width, height);
+    };
+
+    p.mousePressed = () => {
+      handleDiagramPanPress(p);
+    };
+
+    p.mouseDragged = () => {
+      handleDiagramPanDrag(p);
+    };
+
+    p.mouseReleased = () => {
+      handleDiagramPanRelease();
+    };
+
+    p.mouseWheel = (event) => {
+      handleDiagramWheel(p, event);
+      return false;
+    };
+
+    p.touchStarted = () => {
+      handleDiagramTouchStarted(p);
+    };
+
+    p.touchMoved = () => {
+      handleDiagramTouchMoved(p);
+      return false;
+    };
+
+    p.touchEnded = () => {
+      handleDiagramTouchEnded(p);
     };
 
     p.draw = () => {

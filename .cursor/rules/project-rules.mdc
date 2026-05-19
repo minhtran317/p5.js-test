@@ -1,0 +1,38 @@
+---
+alwaysApply: true
+---
+# Workflow
+
+Before editing:
+- Inspect the existing file structure and relevant modules.
+- Inspect ARCHITECTURE.md for architectural constraints.
+- Preserve the project architecture.
+- Keep simulation/math logic separate from rendering/UI logic.
+- Keep constants/config separate from core equations.
+- Do not mix educational explanation text into simulation code unless it belongs in UI content.
+
+# Implementation Rules
+
+- Make the smallest coherent change.
+- Prefer readable, explicit functions.
+- Avoid premature abstractions.
+- Avoid adding libraries unless necessary.
+- Keep the code expandable for future diffraction/interference simulations.
+
+# Verification
+
+- Check that the visualization still runs.
+- Check equations and units.
+- Explain approximations used.
+- Run only:
+  npx --yes serve .
+
+- Do NOT run any other terminal commands.
+
+# Output
+
+Always provide:
+1. Brief plan before changes
+2. Summary of files changed
+3. Tests/checks performed
+4. Remaining limitations

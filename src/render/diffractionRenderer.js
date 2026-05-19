@@ -14,6 +14,210 @@ const MAX_SLIT_GAPS_DRAWN = 24;
 /** Parallel incident rays (direction hint only; not one ray per slit). */
 const INCIDENT_RAY_COUNT = 5;
 
+/** Matches `intensityRenderer` panel height + padding (for pan/zoom hit-test). */
+const INTENSITY_PANEL_RESERVE_PX = 110;
+
+const DIAGRAM_ZOOM_MIN = 0.35;
+const DIAGRAM_ZOOM_MAX = 4;
+const DIAGRAM_ZOOM_STEP = 1.08;
+
+/** @type {{ x: number; y: number }} */
+let diagramPan = { x: 0, y: 0 };
+
+/** @type {number} */
+let diagramZoom = 1;
+
+/** @type {{ mouseX: number; mouseY: number; panX: number; panY: number } | null} */
+let panDragStart = null;
+
+/**
+ * @typedef {{ centerX: number; centerY: number; distance: number; zoom: number; panX: number; panY: number }} PinchGestureStart
+ * @type {PinchGestureStart | null}
+ */
+let pinchGestureStart = null;
+
+/** True while the user is pressing/dragging on the parameters panel (sliders, etc.). */
+let suppressPanForParams = false;
+
+/**
+ * @param {boolean} suppressed
+ */
+export function setDiagramPanSuppressed(suppressed) {
+  suppressPanForParams = suppressed;
+  if (suppressed) {
+    panDragStart = null;
+    pinchGestureStart = null;
+  }
+}
+
+/**
+ * @param {import('p5')} p
+ * @param {number} screenY
+ */
+function isScreenYOverIntensityPanel(p, screenY) {
+  const panelTop = p.height - INTENSITY_PANEL_RESERVE_PX;
+  return screenY >= panelTop;
+}
+
+/**
+ * @param {import('p5')} p
+ */
+function isPointerOverIntensityPanel(p) {
+  return isScreenYOverIntensityPanel(p, p.mouseY);
+}
+
+/**
+ * @param {number} zoom
+ */
+function clampDiagramZoom(zoom) {
+  return Math.min(DIAGRAM_ZOOM_MAX, Math.max(DIAGRAM_ZOOM_MIN, zoom));
+}
+
+/**
+ * @param {number} screenX
+ * @param {number} screenY
+ * @param {number} nextZoom
+ */
+function applyDiagramZoomAt(screenX, screenY, nextZoom) {
+  const clamped = clampDiagramZoom(nextZoom);
+  if (clamped === diagramZoom) return;
+
+  const localX = (screenX - diagramPan.x) / diagramZoom;
+  const localY = (screenY - diagramPan.y) / diagramZoom;
+  diagramZoom = clamped;
+  diagramPan = {
+    x: screenX - localX * diagramZoom,
+    y: screenY - localY * diagramZoom,
+  };
+}
+
+/**
+ * @param {import('p5').Touch[]} touches
+ * @returns {{ centerX: number; centerY: number; distance: number } | null}
+ */
+function pinchMetricsFromTouches(touches) {
+  if (touches.length < 2) return null;
+  const [t0, t1] = touches;
+  const centerX = (t0.x + t1.x) * 0.5;
+  const centerY = (t0.y + t1.y) * 0.5;
+  const distance = Math.hypot(t1.x - t0.x, t1.y - t0.y);
+  if (distance < 1e-6) return null;
+  return { centerX, centerY, distance };
+}
+
+/**
+ * @param {import('p5')} p
+ */
+export function handleDiagramPanPress(p) {
+  if (suppressPanForParams) return;
+  if (pinchGestureStart || p.touches.length >= 2) return;
+  if (p.mouseButton !== p.LEFT) return;
+  if (isPointerOverIntensityPanel(p)) return;
+  panDragStart = {
+    mouseX: p.mouseX,
+    mouseY: p.mouseY,
+    panX: diagramPan.x,
+    panY: diagramPan.y,
+  };
+}
+
+/**
+ * @param {import('p5')} p
+ */
+export function handleDiagramPanDrag(p) {
+  if (suppressPanForParams) return;
+  if (pinchGestureStart || p.touches.length >= 2) return;
+  if (!panDragStart) return;
+  diagramPan = {
+    x: panDragStart.panX + (p.mouseX - panDragStart.mouseX),
+    y: panDragStart.panY + (p.mouseY - panDragStart.mouseY),
+  };
+}
+
+export function handleDiagramPanRelease() {
+  panDragStart = null;
+}
+
+/**
+ * @param {import('p5')} p
+ */
+function beginPinchGesture(p) {
+  const metrics = pinchMetricsFromTouches(p.touches);
+  if (!metrics) return;
+  if (isScreenYOverIntensityPanel(p, metrics.centerY)) return;
+
+  panDragStart = null;
+  pinchGestureStart = {
+    centerX: metrics.centerX,
+    centerY: metrics.centerY,
+    distance: metrics.distance,
+    zoom: diagramZoom,
+    panX: diagramPan.x,
+    panY: diagramPan.y,
+  };
+}
+
+/**
+ * @param {import('p5')} p
+ */
+function updatePinchGesture(p) {
+  if (!pinchGestureStart) return;
+
+  const metrics = pinchMetricsFromTouches(p.touches);
+  if (!metrics) return;
+
+  const scale = metrics.distance / pinchGestureStart.distance;
+  const nextZoom = pinchGestureStart.zoom * scale;
+  const localX =
+    (pinchGestureStart.centerX - pinchGestureStart.panX) / pinchGestureStart.zoom;
+  const localY =
+    (pinchGestureStart.centerY - pinchGestureStart.panY) / pinchGestureStart.zoom;
+
+  diagramZoom = clampDiagramZoom(nextZoom);
+  diagramPan = {
+    x: metrics.centerX - localX * diagramZoom,
+    y: metrics.centerY - localY * diagramZoom,
+  };
+}
+
+/**
+ * @param {import('p5')} p
+ */
+export function handleDiagramTouchStarted(p) {
+  if (suppressPanForParams) return;
+  if (p.touches.length >= 2) beginPinchGesture(p);
+}
+
+/**
+ * @param {import('p5')} p
+ */
+export function handleDiagramTouchMoved(p) {
+  if (suppressPanForParams) return;
+  if (p.touches.length >= 2) {
+    if (!pinchGestureStart) beginPinchGesture(p);
+    updatePinchGesture(p);
+  }
+}
+
+/**
+ * @param {import('p5')} p
+ */
+export function handleDiagramTouchEnded(p) {
+  if (p.touches.length < 2) pinchGestureStart = null;
+}
+
+/**
+ * Wheel zoom about the cursor; keeps the point under the mouse fixed on screen.
+ * @param {import('p5')} p
+ * @param {{ delta: number }} event
+ */
+export function handleDiagramWheel(p, event) {
+  if (isPointerOverIntensityPanel(p)) return;
+
+  const factor = event.delta > 0 ? 1 / DIAGRAM_ZOOM_STEP : DIAGRAM_ZOOM_STEP;
+  applyDiagramZoomAt(p.mouseX, p.mouseY, diagramZoom * factor);
+}
+
 /**
  * @typedef {object} DiagramLayout
  * @property {number} gratingX
@@ -107,6 +311,7 @@ function drawParameterLine(p, params, snapshot) {
     12,
     18,
   );
+  p.text("Grating equation:  d sin θ = mλ", 12, 34);
 }
 
 /**
@@ -248,12 +453,16 @@ function drawScreenDistanceNote(p, params) {
 export function drawDiffractionScene(p, params, snapshot) {
   p.background(252);
 
-  const layout = layoutDiagram(p);
-
   drawParameterLine(p, params, snapshot);
+  drawScreenDistanceNote(p, params);
+
+  p.push();
+  p.translate(diagramPan.x, diagramPan.y);
+  p.scale(diagramZoom);
+  const layout = layoutDiagram(p);
   drawGratingAndScreen(p, layout);
   drawSlitGaps(p, layout, params.slitCount);
   drawDiffractedRaysAndSpots(p, layout, snapshot, params.maxOrderDisplay);
   drawIncidentRays(p, layout);
-  drawScreenDistanceNote(p, params);
+  p.pop();
 }
